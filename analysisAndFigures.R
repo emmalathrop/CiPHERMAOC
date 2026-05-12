@@ -37,24 +37,6 @@ fracPal <- c("#FFFFFF", "#80808025")
 soil <- read.csv("datasets/soil.csv") %>% select(-X)
 stockDf <- read.csv("datasets/stockDf.csv") %>% select(-X)
 
-#Create dataframe with soil samples by core, and calculate the cumulative sum of properties for stock calculations and equivalent ash method
-core <- soilDf %>%            
-  group_by(year, block, fence, plot, treatment) %>% 
-  mutate(coreNum = cur_group_id(), 
-         cu.soil.stock = cumsum(soil.stock),
-         cu.ash.stock = cumsum(ash.stock),
-         cu.C.stock = cumsum(C.stock),
-         cu.N.stock = cumsum(N.stock), 
-         cu.ice.stock = cumsum(moisture), 
-         cu.Fe.stock = cumsum(Fe.stock),
-         cu.FeDCB.stock = cumsum(FeDCB.stock),
-         cu.LC.stock = cumsum(stockLC), 
-         cu.HC.stock = cumsum(stockHC), 
-         cu.LN.stock = cumsum(stockLN),
-         cu.HN.stock = cumsum(stockHN),
-         bulkAsh = bulk.density*ash) %>% 
-  ungroup()
-
 # Percent Carbon in each fraction -----------------------------------------
 
 #What is the %C in each fraction throughout the profile? 
@@ -115,7 +97,7 @@ a <- ggplot(data = filter(soilSumTreat, variable %in% c("HFracC") & (midDepth > 
         legend.text = element_text(size = 14),
         legend.title = element_text(size = 15))
 a
-ggsave(paste0(manDir, "figures/suppHFracCDepth", Sys.Date(), ".png"), width = 15, height = 20, units = "cm", dpi = 300)
+#ggsave(paste0(manDir, "figures/suppHFracCDepth", Sys.Date(), ".png"), width = 15, height = 20, units = "cm", dpi = 300)
 
 # Fraction stocks with equivalent ash normalization -----------------------
 #Create dataframe with soil samples by core, and calculate the cumulative sum of properties for stock calculations and equivalent ash method
@@ -735,7 +717,7 @@ depthStocksLight <- ggplot(subset(stockSum, depth %in%c("Organic (~0-35cm)", "To
         legend.position="none")+
   ggtitle("POC stocks by depth")
 depthStocksLight
-ggsave(paste0(manDir, "figures/suppLightStocksDepth", Sys.Date(), ".png"), width = 10, height = 15, units = "cm", dpi = 300)
+#ggsave(paste0(manDir, "figures/suppLightStocksDepth", Sys.Date(), ".png"), width = 10, height = 15, units = "cm", dpi = 300)
 
 depthStocksHeavy <- ggplot(subset(stockSum, depth %in% c("Organic (~0-35cm)", "Total mineral (~35-75cm)") & fraction == "Heavy"), 
                            aes(x = treatment, y = meanC, fill = treatment))+
@@ -764,7 +746,7 @@ depthComb <- depthStocksHeavy
 depthComb
 
 ggarrange(totalStocksStacked, depthComb, widths = c(1.2,1), labels = c("A)", "B)"))
-ggsave(paste0(manDir, "figures/stocksDepth", Sys.Date(), ".png"), width = 27, height = 20, units = "cm", dpi = 300)
+#ggsave(paste0(manDir, "figures/stocksDepth", Sys.Date(), ".png"), width = 27, height = 20, units = "cm", dpi = 300)
 
 # Radiocarbon of fraction analysis --------------------------------
 
@@ -864,7 +846,7 @@ ggplot(data = subset(d14Sum, (groups %in% c("HFracd14C", "LFracd14C", "delta14")
         axis.title.x = element_blank(),
         axis.text.x = element_text(size = 16))
 
-ggsave(paste0(manDir, "figures/c14BarSupp", Sys.Date(), ".png"), width = 28, height = 15, units = "cm", dpi = 300)
+#ggsave(paste0(manDir, "figures/c14BarSupp", Sys.Date(), ".png"), width = 28, height = 15, units = "cm", dpi = 300)
 
 ## Age offset analysis -----------------------------------------------------
 dfRad <- soil %>% 
@@ -916,7 +898,7 @@ ggplot(data = subset(dfRadSumDepths,
         axis.title = element_text(size = 16),
         axis.text = element_text(size = 16))
 
-ggsave(paste0(manDir, "figures/suppFrac14CByTreat", Sys.Date(), ".png"), width = 20, height = 15, units = "cm", dpi = 300)
+#ggsave(paste0(manDir, "figures/suppFrac14CByTreat", Sys.Date(), ".png"), width = 20, height = 15, units = "cm", dpi = 300)
 
 ggplot(data = subset(dfRadSumDepths, 
                      !(groups %in% c("Bulk sample", "Light fraction", "Heavy fraction")) & 
@@ -937,7 +919,7 @@ ggplot(data = subset(dfRadSumDepths,
         legend.title = element_text(size = 15),
         axis.title = element_text(size = 16),
         axis.text = element_text(size = 16))
-ggsave(paste0(manDir, "figures/suppAgeOffset", Sys.Date(), ".png"), width = 20, height = 15, units = "cm", dpi = 300)
+#ggsave(paste0(manDir, "figures/suppAgeOffset", Sys.Date(), ".png"), width = 20, height = 15, units = "cm", dpi = 300)
 
 
 ## Plot age offset manuscript figure ---------------------------------------
@@ -1011,5 +993,684 @@ barFracOffset <- ggplot(data = subset(dfRadSum, !(groups %in% c("Bulk sample", "
         axis.title.x = element_blank(),
         axis.text.x = element_text(size = 16))
 barFracOffset
-ggsave(paste0(manDir, "figures/ageOffsetBar", Sys.Date(), ".png"), width = 20, height = 15, units = "cm", dpi = 300)
+
+# PRS Probe analysis ------------------------------------------------------
+prs <- read.csv("datasets/prs.csv") %>% select(-X)
+meltPrs <- reshape::melt(as.data.frame(prs), id=c("sampleID", "treatment", "treatmentFull", "fence", "plot", "block")) %>% 
+  mutate(value = as.numeric(value))
+
+## Plot all species --------------------------------------------------------
+ggplot(data = meltPrs, aes(x = variable, y = value, fill = treatment))+
+  geom_boxplot()+
+  facet_wrap(~variable, scales = "free")+
+  scale_fill_manual(values = treatPal[-1])
+
+#elements of interest
+redoxVars <- c("NH4N", "NH4N", "Fe", "Mn", "S", "meanRedox")
+allVars <- c("NO3-N", "NH4-N", "Fe", "Mn", "S", "P", "Al", "Mean of redox")
+
+plotDf <- meltPrs %>%
+  filter(!(variable == "S" & value > 100)) %>% #remove outliers in sulfur plot
+  mutate(variable = recode(variable,
+                           "NO3N" = "NO3-N",
+                           "NH4N" = "NH4-N",
+                           "meanRedox" = "Mean of redox")) %>%
+  subset(variable %in% allVars) %>%
+  mutate(variable = as.character(variable),
+         variable = factor(variable, levels = allVars))
+
+#Add signficance levels
+df = plotDf
+mod <- lme(value ~ variable * treatment,
+           random = ~1 | fence,
+           weights = varIdent(form = ~1 | variable),
+           data = df,
+           control = lmeControl(maxIter = 100, msMaxIter = 100),
+           method = "REML")
+
+#performance::check_model(mod1)
+emm_pairs <- pairs(emmeans::emmeans(mod, ~treatment | variable, adjust = "none"))
+emm_pairs
+
+emm <- emmeans(mod, ~ treatment | variable)
+
+yPos <- plotDf %>%
+  group_by(variable) %>%
+  summarise(y = max(value, na.rm = TRUE) * 1.08)
+
+pvals <- pairs(emm, adjust = "none") %>%
+  summary(infer = c(TRUE, TRUE)) %>%
+  as.data.frame() %>% 
+  select(variable, contrast, p.value) %>% 
+  left_join(yPos, by = "variable") %>% 
+  mutate(
+    label = case_when(
+      p.value < 0.001 ~ "p < 0.001",
+      TRUE ~ paste0("p = ", signif(p.value, 2))))
+
+facet_labeller <- function(x) {
+  ifelse(x %in% c(redoxVars, "NH4-N"),
+         paste0(x, "*"),
+         x)
+}
+
+ggplot(data = plotDf,
+       aes(x = treatment, y = value, fill = treatment)) +
+  geom_boxplot(alpha = 0.7) +
+  facet_wrap(~variable, ncol = 4, scales = "free_y", drop = FALSE,
+             labeller = labeller(variable = facet_labeller)) +
+  scale_fill_manual( values = treatPal[-1], name = "Treatment",
+                     labels = c("2022: Ambient", "2022: Warming")) +
+  geom_text(data = pvals,
+            aes(x = 1.5, y = y, label = label),
+            inherit.aes = FALSE,
+            size = 6)+
+  theme(axis.title.x = element_blank(),
+        axis.text.x = element_blank(),
+        axis.ticks.x = element_blank(),
+        axis.title = element_text(size = 17),
+        axis.text = element_text(size = 17),
+        legend.text = element_text(size = 16),
+        legend.title = element_text(size = 16),
+        legend.position = "bottom")+
+  ylab(expression(paste("Concentration (", mu, "g / 10 cm"^-2, ")")))
+#ggsave(paste0(manDir, "figures/suppPRS", Sys.Date(), ".png"), width = 20, height = 15, units = "cm", dpi = 300)
+
+# make final figure with 
+plotDf <- meltPrs %>%
+  mutate(variable = recode(variable,
+                           "NO3N" = "NO3-N",
+                           "NH4N" = "NH4-N",
+                           "meanRedox" = "Mean of redox")) %>%
+  filter(variable %in% c("Fe", "Mean of redox")) %>%
+  mutate(variable = as.character(variable),
+         variable = factor(variable, levels = c("Fe", "Mean of redox")))
+
+#Add signficance levels
+df = plotDf
+mod <- lme(value ~ variable * treatment,
+           random = ~1 | fence,
+           weights = varIdent(form = ~1 | variable),
+           data = df,
+           control = lmeControl(maxIter = 100, msMaxIter = 100),
+           method = "REML")
+
+#performance::check_model(mod1)
+emm_pairs <- pairs(emmeans::emmeans(mod, ~treatment | variable, adjust = "none"))
+emm_pairs
+
+emm <- emmeans(mod, ~ treatment | variable)
+
+yPos <- plotDf %>%
+  group_by(variable) %>%
+  summarise(y = max(value, na.rm = TRUE) * 1.08)
+
+pvals <- pairs(emm, adjust = "none") %>%
+  summary(infer = c(TRUE, TRUE)) %>%
+  as.data.frame() %>% 
+  select(variable, contrast, p.value) %>% 
+  left_join(yPos, by = "variable") %>% 
+  mutate(
+    label = case_when(
+      p.value < 0.001 ~ "p < 0.001",
+      p.value < 0.01  ~ paste0("p = ",signif(p.value, 2)),
+      p.value < 0.05  ~ "**",
+      p.value < 0.1 ~ "**",
+      TRUE ~ paste0("p = ", signif(p.value, 2))))
+
+a <- ggplot(data = subset(plotDf, variable %in% c("Fe", "Mean of redox")),
+            aes(x = treatment, y = value, fill = treatment)) +
+  geom_boxplot(alpha = 0.7) +
+  facet_wrap(~variable, ncol = 4, scales = "free_y", drop = FALSE) +
+  scale_fill_manual( values = treatPal[-1], name = "Treatment",
+                     labels = c("2022: Ambient", "2022: Warming")) +
+  geom_text(data = pvals,
+            aes(x = 1.5, y = y, label = label),
+            inherit.aes = FALSE,
+            size = 6)+
+  theme(axis.title.x = element_blank(),
+        axis.text.x = element_blank(),
+        axis.ticks.x = element_blank(),
+        axis.title = element_text(size = 17),
+        axis.text = element_text(size = 17),
+        legend.text = element_text(size = 14),
+        legend.title = element_text(size = 14),
+        legend.position = "bottom")+
+  ylab(expression(paste("Concentration (", mu, "g / 10 cm"^-2, ")")))
+a
+
+## Water table depth and PRS data ------------------------------------------
+annualDataset <- read.csv("datasets/allEnvData.csv") %>% select(-X)
+prsEnv <- annualDataset %>% 
+  filter(year == 2022) %>% 
+  mutate(treatment = ifelse(plot > 4, "w", "c")) %>% 
+  left_join(select(prs, -block, -treatmentFull), by = c("fence", "plot", "treatment"))
+
+b <- ggplot(data = subset(prsEnv, meanRedox < 3), aes(x = wtd.mean, y = meanRedox))+
+  geom_point()+
+  #ylim(0, 3)+
+  geom_vline(xintercept = 0, linetype = "dashed")+
+  ggpmisc::stat_poly_line(aes(x = wtd.mean, y = meanRedox), color = "black", alpha = 0.25) +
+  ggpmisc::stat_poly_eq(aes(x = wtd.mean, y = meanRedox,
+                            label = paste(..rr.label.., ..p.value.label.., sep = "~~~")),
+                        formula = y ~ x,
+                        label.x = "right",
+                        label.y = "top") +  scale_x_reverse()+
+  ylab("Mean of redox-sensitive ion loadings (-)")+
+  xlab("Depth to reach water table in 2022 (cm)")+
+  theme(axis.title = element_text(size = 16),
+        axis.text = element_text(size = 14))
+b
+
+mod <- lmer(meanRedox ~ wtd.mean + (1|fence), data = prsEnv)
+drop1(mod, test = "Chisq")
+tab_model(mod)
+
+ggarrange(a, b, widths = c(1, 0.8), labels = c("A)", "B)"))
+#ggsave(paste0(manDir, "figures/prsEnv", Sys.Date(), ".png"), width = 25, height = 15, units = "cm", dpi = 300)
+# XRF Fe analysis  -----------------------------------------------
+
+## Fe and wtd plots --------------------------------------------------------
+
+meanWtdTreatment <- annualDataset %>% 
+  filter(year == 2009 | year == 2022) %>% 
+  mutate(treatment = ifelse(plot>4, "w", "c"),
+         treatment = ifelse(year == 2009, "initial", treatment)) %>% 
+  group_by(year, treatment) %>% 
+  summarise(meanWtd = mean(wtd.mean, na.rm = TRUE),
+            sdWtd = sd(wtd.mean, na.rm = TRUE),
+            seWtd = plotrix::std.error(wtd.mean, na.rm = TRUE),
+            meanWtdSd = mean(wtd.sd, na.rm = TRUE)) %>% 
+  ungroup() 
+
+coreWtdTreatment <- core %>% 
+  filter(year == 2009 | year == 2022) %>% 
+  mutate(treatment = ifelse(plot>4, "w", "c"),
+         treatment = ifelse(year == 2009, "initial", treatment),
+         CtoN = C/N) %>% 
+  group_by(treatment, midDepth) %>% 
+  summarise(meanFe = mean(Fe, na.rm = TRUE),
+            sdFe = sd(Fe, na.rm = TRUE),
+            seFe = plotrix::std.error(Fe, na.rm = TRUE),
+            meanHFrac = mean(HFracC, na.rm = TRUE),
+            sdHFrac = sd(HFracC, na.rm = TRUE),
+            meanLFrac = mean(LFracC, na.rm = TRUE),
+            sdLFrac = sd(LFracC, na.rm = TRUE),
+            meanHFrac14C = mean(HFracd14C, na.rm = TRUE),
+            sdHFrac14C= sd(HFracd14C, na.rm = TRUE),
+            meanLFrac14C = mean(LFracd14C, na.rm = TRUE),
+            sdLFrac14C= sd(LFracd14C, na.rm = TRUE),
+            meanBulk14C = mean(delta14, na.rm = TRUE),
+            sdBulk14C = sd(delta14, na.rm = TRUE)) %>% 
+  mutate(treatment = factor(treatment, 
+                            levels = c("initial", "c", "w"))) %>% 
+  ungroup()
+
+treat_scale <- scale_color_manual(name   = "Treatment",
+                                  values = c(initial = "#808080", c = "#377EB8", w = "#E41A1C"),
+                                  # breaks = treat_levels,
+                                  # limits = treat_levels,
+                                  labels = c(initial = "2009: Initial",
+                                             c       = "2022: Ambient",
+                                             w       = "2022: Warming"),
+                                  drop   = FALSE)
+legend_fix <- guides(color = guide_legend(override.aes = list(linetype = "solid",
+                                                              shape    = 16,
+                                                              size     = 1.2,
+                                                              alpha    = 1)))
+
+iPlot <- ggplot(data = subset(coreWtdTreatment, treatment =="initial" & midDepth < 80), 
+                aes(x = midDepth, y = meanFe, group = treatment))+
+  geom_vline(data = subset(meanWtdTreatment, treatment == "initial"), 
+             aes(xintercept = meanWtd, color = treatment), alpha = 0.7, size = 1, show.legend = FALSE)+
+  geom_vline(data = subset(meanWtdTreatment, treatment == "initial"), 
+             aes(xintercept = meanWtd + meanWtdSd, color = treatment), alpha = 0.7, size = 1,  lty = "dashed", show.legend = FALSE)+
+  geom_vline(data = subset(meanWtdTreatment, treatment == "initial"), 
+             aes(xintercept = meanWtd - meanWtdSd, color = treatment), alpha = 0.7, size = 1, lty = "dashed", show.legend = FALSE)+
+  geom_point(aes(color = treatment))+
+  geom_line(aes(color = treatment), alpha = 0.7, size = 1)+
+  geom_errorbar(aes(ymin = meanFe-seFe, ymax = meanFe+seFe, color = treatment), size = 1, width = 1.5)+
+  treat_scale + legend_fix+
+  scale_x_reverse(limits = c(71, -1),
+                  breaks = c(0, 20, 40, 60))+ coord_flip()+
+  theme(axis.text.x = element_text(angle = 45, vjust = 0.5),
+        legend.position = "bottom",
+        axis.title = element_text(size = 17),
+        axis.text = element_text(size = 17),
+        legend.text = element_text(size = 15),
+        legend.title = element_text(size = 15))+
+  xlab("Depth (cm)")+
+  ylab(expression(Fe~"("~mg~kg^{-1}~soil~")"))
+iPlot 
+
+cPlot <- ggplot(data = subset(coreWtdTreatment, treatment != "w" & midDepth < 80), 
+                aes(x = midDepth, y = meanFe, group = treatment))+
+  geom_vline(data = subset(meanWtdTreatment, treatment != "w" & treatment != "initial"), 
+             aes(xintercept = meanWtd, color = treatment), alpha = 0.7, size = 1)+
+  geom_vline(data = subset(meanWtdTreatment, treatment != "w" & treatment != "initial"), 
+             aes(xintercept = meanWtd + meanWtdSd, color = treatment), alpha = 0.7, size = 1,  lty = "dashed")+
+  geom_vline(data = subset(meanWtdTreatment, treatment != "w" & treatment != "initial"), 
+             aes(xintercept = meanWtd - meanWtdSd, color = treatment), alpha = 0.7, size = 1, lty = "dashed")+
+  geom_point(aes(color = treatment))+
+  geom_line(aes(color = treatment), alpha = 0.7, linewidth = 1)+
+  geom_errorbar(aes(ymin = meanFe-seFe, ymax = meanFe+seFe, color = treatment), size = 1, width = 1.5)+
+  treat_scale + legend_fix+
+  scale_x_reverse(limits = c(71, -1),
+                  breaks = c(0, 20, 40, 60))+ coord_flip()+
+  theme(axis.text.x = element_text(angle = 45, vjust = 0.5),
+        legend.position = "bottom",
+        axis.title = element_text(size = 17),
+        axis.text = element_text(size = 17),
+        legend.text = element_text(size = 15),
+        legend.title = element_text(size = 15))+
+  xlab("Depth (cm)")+
+  ylab(expression(Fe~"("~mg~kg^{-1}~soil~")"))
+cPlot 
+
+wPlot <- ggplot(data = subset(coreWtdTreatment, treatment != "c" & midDepth < 80), 
+                aes(x = midDepth, y = meanFe, group = treatment))+
+  geom_vline(data = subset(meanWtdTreatment, treatment != "c" & treatment != "initial"), 
+             aes(xintercept = meanWtd, color = treatment), alpha = 0.7, size = 1)+
+  geom_vline(data = subset(meanWtdTreatment, treatment != "c" & treatment != "initial"), 
+             aes(xintercept = meanWtd + meanWtdSd, color = treatment), alpha = 0.7, size = 1,  lty = "dashed")+
+  geom_vline(data = subset(meanWtdTreatment, treatment != "c" & treatment != "initial"), 
+             aes(xintercept = meanWtd - meanWtdSd, color = treatment), alpha = 0.7, size = 1, lty = "dashed")+
+  geom_point(aes(color = treatment))+
+  geom_line(aes(color = treatment), alpha = 0.7, size = 1)+
+  geom_errorbar(aes(ymin = meanFe-seFe, ymax = meanFe+seFe, color = treatment), 
+                alpha = 0.7, size = 1, width = 1.5)+
+  treat_scale + legend_fix+
+  scale_x_reverse(limits = c(71, -1),
+                  breaks = c(0, 20, 40, 60))+ coord_flip()+
+  theme(axis.text.x = element_text(angle = 45, vjust = 0.5),
+        legend.position = "bottom",
+        axis.title = element_text(size = 17),
+        axis.text = element_text(size = 17),
+        legend.text = element_text(size = 15),
+        legend.title = element_text(size = 15))+  
+  xlab("Depth (cm)")+
+  ylab(expression(Fe~"("~mg~kg^{-1}~soil~")"))
+wPlot 
+
+legend_df <- data.frame(treatment = factor(c("initial", "c", "w"),
+                                           levels = c("initial", "c", "w")),
+                        midDepth = Inf,
+                        meanFe   = Inf)
+
+legend_point <- geom_point(data = legend_df,
+                           aes(x = midDepth, y = meanFe, color = treatment),
+                           size = 3,
+                           alpha = 0,
+                           inherit.aes = FALSE,
+                           show.legend = TRUE)
+
+legend_line <- geom_line(data = legend_df,
+                         aes(x = midDepth, y = meanFe, color = treatment, group = treatment),
+                         size = 1,
+                         alpha = 0,
+                         inherit.aes = FALSE,
+                         show.legend = TRUE)
+
+cPlot <- cPlot + legend_line + legend_point
+wPlot <- wPlot + legend_line + legend_point 
+iPlot <- iPlot + legend_line + legend_point
+
+y_scale <- scale_y_continuous(limits = range(coreWtdTreatment$meanFe, na.rm = TRUE),
+                              expand = expansion(mult = c(0.02, 0.02)))
+
+ggarrange(iPlot + y_scale, ((cPlot + y_scale) + rremove("ylab")), ((wPlot + y_scale) + rremove("ylab")), 
+          widths = c(1, 0.9, 0.9), nrow = 1, common.legend = TRUE, legend = "bottom")
+
+#ggsave(paste0(manDir, "figures/FeWtd", Sys.Date(), ".png"), width = 20, height = 15, units = "cm", dpi = 300)
+
+# Water table variability analysis -----------------------------------------
+## Water table change over time --------------------------------------------
+wtdSum <- annualDataset %>% 
+  filter(year == 2009 | year == 2022) %>% 
+  group_by(year, treatment2) %>% 
+  summarise(meanWtd = mean(wtd.mean, na.rm = TRUE),
+            seMeanWtd = plotrix::std.error(wtd.mean, na.rm = TRUE),
+            meanSdWtd = mean(wtd.sd, na.rm = TRUE),
+            seSdWtd = plotrix::std.error(wtd.sd, na.rm = TRUE))
+
+#wtd mean change over time
+a <- ggplot(annualDataset, aes(x = as.factor(year), y = wtd.mean, fill= treatment2))+
+  geom_hline(yintercept = 0, linetype = "solid", color = "black", linewidth = 1, alpha = 0.8)+
+  geom_hline(yintercept = 25, linetype = "dashed", color = "brown", linewidth = 1, alpha = 0.8)+
+  geom_boxplot(alpha = 0.6)+
+  scale_y_reverse()+
+  ylab("Water table depth (cm below surface)")+
+  xlab("Year")+
+  scale_fill_manual(values = treatPal[], name = "Treatment", 
+                    labels = c("i" = "Initial",
+                               "c" = "Ambient",
+                               "w" = "Warming"))+
+  theme(axis.text.x = element_text(size = 17, angle = 45, vjust = 0.5, hjust=0.5),
+        legend.position = "top",
+        axis.title.y = element_text(size = 18))
+a
+
+#wtd sd summarized
+b <- ggplot(subset(annualDataset, year == 2009 | year == 2022), 
+            aes(x = treatment2, y = wtd.sd, fill = treatment2))+
+  geom_boxplot(alpha = 0.6)+
+  scale_x_discrete(labels = stringr::str_wrap(c("2009: Initial", "2022: Ambient", "2022: Warming"), width = 10))+
+  scale_fill_manual(values = treatPal, name = element_blank(), 
+                    labels = c("2009 initial", "2022 ambient", "2022 warming"))+
+  ylab("Water table variability (sd of cm)")+
+  scale_y_reverse()+
+  theme(legend.position = "none",
+        axis.title.x = element_blank(),
+        axis.text.x = element_text(size = 15),
+        axis.title.y = element_text(size = 18))
+b
+
+#wtd sd summarized
+c <- ggplot(subset(annualDataset, year == 2009 | year == 2022), 
+            aes(x = treatment2, y = t40.filled.mean, fill = treatment2))+
+  geom_boxplot(alpha = 0.6)+
+  scale_x_discrete(labels = stringr::str_wrap(c("2009: Initial", "2022: Ambient", "2022: Warming"), width = 10))+
+  scale_fill_manual(values = treatPal, name = element_blank(), 
+                    labels = c("2009 initial", "2022 ambient", "2022 warming"))+
+  ylab("40 cm soil temperature (°C)")+
+  #scale_y_reverse()+
+  theme(legend.position = "none",
+        axis.title.x = element_blank(),
+        axis.text.x = element_text(size = 15),
+        axis.title.y = element_text(size = 18))
+c
+
+ggarrange(c, a, b, ncol = 3, widths = c(0.7, 1, 0.7), heights = c(1, 0.75, 0.75), labels = c("A)", "B)", "C)"))
+#ggsave(paste0(manDir, "figures/experimentWtdChange", Sys.Date(), ".png"), width = 35, height = 15, units = "cm", dpi = 300)
+
+
+# Environmental analysis --------------------------------------------------
+
+#combine stock data with annual dataset (with just 2009 and 2022)
+stockEnv <- ashNormStock %>% 
+  filter(fence != 7) %>% 
+  select(-treatment, -block) %>% 
+  left_join(filter(annualDataset, (year == 2009 | year == 2022)), by = c("year", "fence", "plot")) 
+
+stockEnv$wtd.mean.sc <- scale(stockEnv$wtd.mean) 
+stockEnv$wtd.sd.sc <- scale(stockEnv$wtd.sd)
+stockEnv$t40.filled.mean.sc <- scale(stockEnv$t40.filled.mean)
+stockEnv$winter.t40.mean.sc <- scale(stockEnv$winter.t40.mean)
+
+## Controls on spatial patterns of heavy fraction stock --------------------------------
+#hypothesized vars: 
+#wtd.mean.sc, wtd.sd.sc, t40.filled.mean.sc, winter.t40.mean.sc
+
+#2022 data paired with measurements from 2022
+
+#Mineral layer
+df <- subset(stockEnv, (depth == "m" & year == 2022))
+hist(df$Cstock.H, breaks = 20) #fairly normally distributed
+
+mod <- lmer(Cstock.H ~ wtd.mean.sc + wtd.sd.sc + t40.filled.mean.sc + winter.t40.mean.sc + (1|fence), data =  df)
+mod.full.m <- mod 
+drop1(mod, test = "Chisq")
+#no significant predictors
+
+#3. Third layer: deep mineral 
+df <- subset(stockEnv, (depth == "dm" & year == 2022))
+
+mod <- lmer(Cstock.H ~ wtd.mean.sc + wtd.sd.sc + t40.filled.mean.sc + winter.t40.mean.sc + (1|fence), data =  df)
+mod.full.dm <- mod 
+drop1(mod, test = "Chisq")
+
+mod <- lmer(Cstock.H ~ wtd.mean.sc + (1|treatment), data = df)
+tab_model(mod)
+performance::check_model(datawizard::standardize(mod))
+mod.dm <- mod
+
+#create a table of the full and final models
+#full models
+m_tbl <- parameters::model_parameters(mod.full.m, standardize = "refit") %>%
+  mutate(Model = "2022 Mineral stocks (~35–55 cm)")
+
+dm_tbl <- parameters::model_parameters(mod.full.dm, standardize = "refit") %>%
+  mutate(Model = "2022 Deep Mineral stocks (~55–75 cm)")
+
+model_colors <- c("2022 Mineral stocks (~35–55 cm)" = alpha("#8B775F", alpha = 0.65),
+                  "2022 Deep Mineral stocks (~55–75 cm)" = alpha("#6B472C", alpha = 0.65))
+
+library(gt)
+full_table_gt <- bind_rows(m_tbl, dm_tbl) %>%
+  filter(!grepl("Intercept", Parameter)) %>%
+  dplyr::select(Model, Parameter, Coefficient, CI_low, CI_high, SE, p) %>% 
+  mutate(Model = factor(Model, levels = c("2022 Mineral stocks (~35–55 cm)", 
+                                          "2022 Deep Mineral stocks (~55–75 cm)"))) %>% 
+  filter(Parameter != "SD (Observations)") %>% 
+  gt(groupname_col = "Model") %>%
+  text_case_match("wtd.sd.sc" ~ "Water table variability", 
+                  "wtd.mean.sc"~"Water table depth",
+                  "winter.t40.mean.sc"~"Winter soil temp (40cm)",
+                  "t40.filled.mean.sc"~"Summer soil temp (40cm)") %>% 
+  # Round numeric columns to 2 decimal places
+  fmt_number(columns = vars(Coefficient, SE, CI_low, CI_high, p),
+             decimals = 2) %>%
+  # Define the column labels
+  cols_label(Parameter = "Predictor",
+             Coefficient = "Std. Estimate",
+             SE = "Std. Error",
+             CI_low = "CI Low",
+             CI_high = "CI High",
+             p = "p-value") %>%
+  tab_header(title = "Full spatial model by soil layer") %>%
+  # Apply custom colors to each row group (model layer)
+  tab_style(style = list(
+    cell_text(align = "center", weight = "bold"),
+    cell_fill(color = model_colors["2022 Mineral stocks (~35–55 cm)"])),
+    locations = cells_row_groups(groups = "2022 Mineral stocks (~35–55 cm)")) %>%
+  tab_style(style = list(
+    cell_text(align = "center", weight = "bold"),
+    cell_fill(color = model_colors["2022 Deep Mineral stocks (~55–75 cm)"])),
+    locations = cells_row_groups(groups = "2022 Deep Mineral stocks (~55–75 cm)")) %>%
+  # Center the row group labels (titles)
+  tab_spanner(label = "", columns = everything())
+full_table_gt 
+#gtsave(full_table_gt , filename = paste0(manDir, "figures/spatialModelFull.png"))
+
+#Final model table
+
+#no mineral layer parameters improved model fit
+
+dm_tbl <- parameters::model_parameters(mod.dm, standardize = "refit") %>%
+  mutate(Model = "2022 Deep Mineral stocks (~55–75 cm)")
+
+r2_fin_dm <- performance::r2_nakagawa(mod.dm)
+r2_fin_text_dm <- paste0("R²m = ", round(r2_fin_dm$R2_marginal, 2),
+                         ", R²c = ", round(r2_fin_dm$R2_conditional, 2))
+
+final_table_gt <- bind_rows(dm_tbl) %>%
+  filter(!grepl("Intercept", Parameter)) %>%
+  dplyr::select(Model, Parameter, Coefficient, CI_low, CI_high, SE, p) %>% 
+  mutate(Model = factor(Model, levels = c("2022 Deep Mineral stocks (~55–75 cm)"))) %>% 
+  filter(Parameter != "SD (Observations)") %>% 
+  gt(groupname_col = "Model") %>%
+  text_case_match("wtd.sd.sc" ~ "Water table variability", 
+                  "wtd.mean.sc"~"Water table depth",
+                  "winter.t40.mean.sc"~"Winter soil temp (40cm)",
+                  "t40.filled.mean.sc"~"Summer soil temp (40cm)") %>% 
+  # Round numeric columns to 2 decimal places
+  fmt_number(columns = vars(Coefficient, SE, CI_low, CI_high, p),
+             decimals = 2) %>%
+  # Define the column labels
+  cols_label(Parameter = "Predictor",
+             Coefficient = "Std. Estimate",
+             SE = "Std. Error",
+             CI_low = "CI Low",
+             CI_high = "CI High",
+             p = "p-value") %>%
+  tab_header(title = "Final spatial model by soil layer") %>%
+  # Apply custom colors to each row group (model layer)
+  tab_style(style = list(
+    cell_text(align = "center", weight = "bold"),
+    cell_fill(color = model_colors["2022 Deep Mineral stocks (~55–75 cm)"])),
+    locations = cells_row_groups(groups = "2022 Deep Mineral stocks (~55–75 cm)")) %>%
+  # Center the row group labels (titles)
+  tab_spanner(label = "", columns = everything())
+
+final_table_gt %>% 
+  tab_source_note(source_note = paste0(
+    "Model fit: ", r2_fin_text_dm))
+#gtsave(final_table_gt , filename = paste0(manDir, "figures/spatialModelFin.png"))
+
+## Dataset with change in stocks and mean plot environmental variables---------------------------------------
+
+#create dataframe that averages all values by plot for the 13 years of CiPHER
+env <- annualDataset %>%
+  dplyr::select(-year, -treatment, -treatment2) %>% 
+  group_by(fence, plot) %>% 
+  summarise(across(everything(), \(x) mean(x, na.rm = TRUE))) %>% 
+  mutate(treatment = ifelse(plot <= 4,'c', 'w')) %>% 
+  ungroup() %>%
+  mutate(treatment = ifelse(plot <= 4,'Control', 'Warming'),
+         treatmentFull = ifelse(plot == 2 | plot == 4,
+                                'Control',
+                                ifelse(plot == 1 | plot == 3,
+                                       'Air Warming',
+                                       ifelse(plot == 6 | plot == 8,
+                                              'Soil Warming',
+                                              'Air + Soil Warming'))),
+         block = ifelse(fence <= 2,
+                        'a',
+                        ifelse(fence <= 4,
+                               'b',
+                               'c'))) %>% 
+  rowwise() %>% 
+  mutate(treatment = as.factor(treatment),
+         treatmentNum = ifelse(treatment == "Control", 1, 2)) %>% 
+  dplyr::select(-treatmentFull, -treatment) %>% 
+  ungroup() 
+
+## scale variables
+env$wtd.mean.sc <- scale(env$wtd.mean) 
+env$wtd.sd.sc <- scale(env$wtd.sd)
+env$t40.filled.mean.sc <- scale(env$t40.filled.mean)
+env$winter.t40.mean.sc <- scale(env$winter.t40.mean)
+
+#calculate the change in stocks by fraction and depth
+stockDiff <- ashNormStock %>%
+  filter(year %in% c(2009, 2022)) %>%
+  group_by(fence, depth) %>%
+  mutate(L_2009 = Cstock.L[year == 2009][1],
+         H_2009 = Cstock.H[year == 2009][1]) %>%
+  ungroup() %>%
+  # Compute change ONLY for 2022 rows
+  mutate(L_change = ifelse(year == 2022, Cstock.L - L_2009, NA),
+         H_change = ifelse(year == 2022, Cstock.H - H_2009, NA)) %>% 
+  filter(year != 2009) %>% 
+  #add in environmental variables 
+  left_join(env, by = c("fence", "plot"))
+
+## Controls on change in heavy fraction stocks ---------------------------------
+#hypothesized variables
+#wtd.mean.sc, wtd.sd.sc, daysSat25cm.sc, daysDry25cm.sc, tp.sc, t40.filled.mean.sc, winter.t40.mean.sc
+
+#Mineral layer 
+df <- subset(stockDiff,depth %in% c("m"))
+mod <- lmer(H_change ~wtd.mean.sc + wtd.sd.sc + t40.filled.mean.sc + winter.t40.mean.sc + (1|fence), data =  df)
+mod.full.m <- mod
+drop1(mod, test = "Chisq")
+mod <- lmer(H_change ~ wtd.sd.sc + t40.filled.mean.sc + (1|fence), data =  df)
+sjPlot::tab_model(mod)
+fin.m <- mod
+
+#Deep mineral layer
+df <- subset(stockDiff,depth %in% c("dm"))
+mod <- lmer(H_change ~wtd.mean.sc + wtd.sd.sc + t40.filled.mean.sc + winter.t40.mean.sc + (1|fence), data =  df)
+mod.full.dm <- mod
+drop1(mod, test = "Chisq")
+#no significant predictors in final model
+
+#create a table of the full and final models
+#full models
+m_tbl <- parameters::model_parameters(mod.full.m, standardize = "refit") %>%
+  mutate(Model = "Change in MAOC stocks in mineral layer (~35–55 cm)")
+
+dm_tbl <- parameters::model_parameters(mod.full.dm, standardize = "refit") %>%
+  mutate(Model = "Change in MAOC stocks in deep mineral layer (~55–75 cm)")
+
+model_colors <- c("Change in MAOC stocks in mineral layer (~35–55 cm)" = alpha("#8B775F", alpha = 0.65),
+                  "Change in MAOC stocks in deep mineral layer (~55–75 cm)"= alpha("#6B472C", alpha = 0.65))
+
+full_table_gt <- bind_rows(m_tbl, dm_tbl) %>%
+  filter(!grepl("Intercept", Parameter)) %>%
+  dplyr::select(Model, Parameter, Coefficient, CI_low, CI_high, SE, p) %>% 
+  mutate(Model = factor(Model, levels = c("Change in MAOC stocks in mineral layer (~35–55 cm)", 
+                                          "Change in MAOC stocks in deep mineral layer (~55–75 cm)"))) %>% 
+  filter(Parameter != "SD (Observations)") %>% 
+  gt(groupname_col = "Model") %>%
+  text_case_match("wtd.sd.sc" ~ "Water table variability",
+                  "wtd.mean.sc"~"Water table depth",
+                  "winter.t40.mean.sc"~"Winter soil temp (40cm)",
+                  "t40.filled.mean.sc"~"Summer soil temp (40cm)") %>% 
+  # Round numeric columns to 2 decimal places
+  fmt_number(columns = vars(Coefficient, SE, CI_low, CI_high, p),
+             decimals = 2) %>%
+  # Define the column labels
+  cols_label(Parameter = "Predictor",
+             Coefficient = "Std. Estimate",
+             SE = "Std. Error",
+             CI_low = "CI Low",
+             CI_high = "CI High",
+             p = "p-value") %>%
+  tab_header(title = "Full difference model by soil layer") %>%
+  # Apply custom colors to each row group (model layer)
+  tab_style(style = list(cell_text(align = "center", weight = "bold"),
+                         cell_fill(color = model_colors["Change in MAOC stocks in mineral layer (~35–55 cm)"])),
+            locations = cells_row_groups(groups ="Change in MAOC stocks in mineral layer (~35–55 cm)")) %>%
+  tab_style(style = list(cell_text(align = "center", weight = "bold"),
+                         cell_fill(color = model_colors["Change in MAOC stocks in deep mineral layer (~55–75 cm)"])),
+            locations = cells_row_groups(groups = "Change in MAOC stocks in deep mineral layer (~55–75 cm)")) %>%
+  # Center the row group labels (titles)
+  tab_spanner(label = "", columns = everything())
+
+full_table_gt 
+#gtsave(full_table_gt , filename = paste0(manDir, "figures/differenceModelFull.png"))
+
+m_tbl <- parameters::model_parameters(fin.m, standardize = "refit") %>%
+  mutate(Model = "Change in MAOC stocks in mineral layer (~35–55 cm)")
+r2_fin_m <- performance::r2_nakagawa(fin.m)
+r2_fin_text_m <- paste0("R²m = ", round(r2_fin_m$R2_marginal, 2),
+                        ", R²c = ", round(r2_fin_m$R2_conditional, 2))
+
+final_table_gt <- bind_rows(m_tbl) %>%
+  filter(!grepl("Intercept", Parameter)) %>%
+  dplyr::select(Model, Parameter, Coefficient, CI_low, CI_high, SE, p) %>% 
+  mutate(Model = factor(Model, levels = c("Change in MAOC stocks in mineral layer (~35–55 cm)", 
+                                          "Change in MAOC stocks in deep mineral layer (~55–75 cm)"))) %>% 
+  filter(Parameter != "SD (Observations)") %>% 
+  gt(groupname_col = "Model") %>%
+  text_case_match("wtd.sd.sc" ~ "Water table variability",
+                  "wtd.mean.sc"~"Water table depth",
+                  "winter.t40.mean.sc"~"Winter soil temp (40cm)",
+                  "t40.filled.mean.sc"~"Summer soil temp (40cm)",
+                  "SD (Observations)"~"SD (Observations)") %>% 
+  # Round numeric columns to 2 decimal places
+  fmt_number(columns = vars(Coefficient, SE, CI_low, CI_high, p),
+             decimals = 2) %>%
+  # Define the column labels
+  cols_label(Parameter = "Predictor",
+             Coefficient = "Std. Estimate",
+             SE = "Std. Error",
+             CI_low = "CI Low",
+             CI_high = "CI High",
+             p = "p-value") %>%
+  tab_header(title = "Final difference model by soil layer") %>%
+  # Apply custom colors to each row group (model layer)
+  tab_style(style = list(
+    cell_text(align = "center", weight = "bold"),
+    cell_fill(color = model_colors["Change in MAOC stocks in mineral layer (~35–55 cm)"])),
+    locations = cells_row_groups(groups = "Change in MAOC stocks in mineral layer (~35–55 cm)")) %>%
+  tab_spanner(label = "", columns = everything()) 
+
+final_table_gt %>% 
+  tab_source_note(source_note = paste0(
+    "Model fit: ",
+    "Mineral (35–55 cm): ", r2_fin_text_m))
+
+#gtsave(final_table_gt , filename = paste0(manDir, "figures/differenceModelFin.png"))
 
